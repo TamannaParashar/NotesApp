@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+@keyframes drop-in {
+  0% {
+    transform: translateY(-1em);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0.15em);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-drop-in {
+  /* slowed down so it's clearly visible on initial load */
+  animation: drop-in 1400ms cubic-bezier(1, 2, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drop-in {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* orbiting badges around circular image */
+@keyframes orbit-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.orbit-container {
+  position: relative;
+  width: 360px;
+  height: 360px;
+}
+
+.orbit-image {
+  width: 300px;
+  height: 300px;
+  border-radius: 9999px;
+  object-fit: cover;
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 5px solid white;
+}
+
+/* visible circular ring around the image */
+.orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+/* rotating layer carrying badges */
+.orbit-spin {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  animation: orbit-spin 14s linear infinite;
+  will-change: transform;
+}
+
+/* each badge is positioned on the ring; they counter-rotate so text stays upright */
+.orbit-badge {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: #00538c; /* ensure contrast when on light bg */
+  background: white;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 9999px;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* badge anchors on cardinal points of the ring */
+.orbit-top {
+  left: 50%;
+  top: 0%;
+}
+.orbit-right {
+  left: 100%;
+  top: 50%;
+}
+.orbit-bottom {
+  left: 50%;
+  top: 100%;
+}
+.orbit-left {
+  left: 0%;
+  top: 50%;
+}
+
+/* keep badge text upright while parent spins */
+.orbit-badge > span {
+  display: inline-block;
+  transform: rotate(-0deg);
+}
+
+/* reduce motion support */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-spin {
+    animation: none !important;
+  }
+}
+
+/* feature card background overlay helper */
+.card-bg {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25), rgba(0, 0, 0, 0.45));
+}
+
+/* pen doodle styles under the title */
+.pen-doodle {
+  position: relative;
+  height: 90px;
+  margin-top: 8px;
+}
+.pen-doodle svg {
+  position: absolute;
+  inset: 0;
+}
+.pen-icon {
+  position: absolute;
+  right: 8%;
+  bottom: 6px;
+  width: 28px;
+  height: 28px;
+  transform: rotate(-12deg);
+}
