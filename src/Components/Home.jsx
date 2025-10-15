@@ -9,16 +9,16 @@ function OrbitingImage() {
       <div className="orbit-ring" aria-hidden="true" />
       <div className="orbit-spin" aria-hidden="true">
         <div className="orbit-badge orbit-top">
-          <span>Privacy</span>
+          <span>Privacy🔒</span>
         </div>
         <div className="orbit-badge orbit-right">
-          <span>User-friendly</span>
+          <span>User-friendly🤝</span>
         </div>
         <div className="orbit-badge orbit-bottom">
-          <span>Professional</span>
+          <span>Professional🧑‍💼</span>
         </div>
         <div className="orbit-badge orbit-left">
-          <span>Friends</span>
+          <span>Friends👫</span>
         </div>
       </div>
     </div>
@@ -54,7 +54,6 @@ function FeatureCard({ title, desc, shown, delay = 0, img }) {
 }
 
 function PenDoodle() {
-  // Decorative dotted curve with a small pen icon near the end
   return (
     <div className="pen-doodle" aria-hidden="true">
       <svg viewBox="0 0 800 120" preserveAspectRatio="none" className="pointer-events-none">
@@ -67,7 +66,6 @@ function PenDoodle() {
           opacity="0.9"
         />
       </svg>
-      {/* simple pen icon */}
       <svg className="pen-icon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M2 22l4.5-1.2L20.2 7.1a2.2 2.2 0 0 0 0-3.1l-0.2-0.2a2.2 2.2 0 0 0-3.1 0L3.2 17.6 2 22z" fill="white" />
         <path d="M16.9 3.8l3.3 3.3" stroke="#00538C" strokeWidth="2" />
@@ -89,6 +87,10 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("")
 
   const generateRoomCode = () => {
+    if(groupName==="" || adminName==="" || membersCount===""){
+        alert("Enter the required information first")
+        return;
+    }
     const codeGen = Math.floor(10000 + Math.random() * 90000).toString()
     setRoomCode(codeGen)
   }
@@ -130,6 +132,22 @@ export default function Home() {
     setCode(newCode)
   }
 
+  const handleCreateRoom=async()=>{
+    const res = await fetch("/api/addCreateRoomInfo",{
+        method:"Post",
+        headers: {"Content-Type": "application/json"},
+        body:JSON.stringify({
+            groupName,
+            adminName,
+            membersCount,
+            roomCode
+        })
+    });
+    const data = await res.json();
+    console.log(data);
+    alert("Data saved")
+  }
+
   const features = [
     {
       title: "Privacy",
@@ -154,19 +172,9 @@ export default function Home() {
         className="mx-auto flex w-full items-center justify-between px-6 py-5 bg-white"
         style={{ color: "#00538C", border: "3px solid #00538C" }}
       >
-        <nav className="hidden items-center gap-6 sm:flex justify-end">
-          <a
-            href="#features"
-            className="rounded-md border border-[#00538C]/70 px-3 py-2 font-medium text-[#00538C] transition-all hover:-translate-y-0.5 hover:border-[#00538C] hover:bg-[#00538C] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00538C]/70"
-          >
-            Features
-          </a>
-          <a
-            href="#"
-            className="rounded-md border border-[#00538C]/70 px-3 py-2 font-medium text-[#00538C] transition-all hover:-translate-y-0.5 hover:border-[#00538C] hover:bg-[#00538C] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00538C]/70"
-          >
-            About
-          </a>
+        <nav className="flex gap-6 sm:flex">
+          <a href="#features" className="text-#00538C font-semibold">Features</a>
+          <a href="#" className="text-#00538C font-semibold">About</a>
         </nav>
       </header>
 
@@ -191,7 +199,7 @@ export default function Home() {
             <PenDoodle />
 
             <p className="mt-4 max-w-2xl text-pretty text-white/90 sm:text-lg">
-              Fast, collaborative, and secure note rooms. Jump into a room with your team or create a new space in
+              Fast, collaborative, and secure chat rooms. Jump into a room with your team or create a new space in
               seconds—stay in flow and ship ideas faster.
             </p>
 
@@ -222,7 +230,14 @@ export default function Home() {
         {join && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all">
             <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/15 p-8 shadow-[inset_0_0_20px_rgba(255,255,255,0.35)] backdrop-blur-xl transition-all scale-100">
-              <h2 className="text-2xl font-semibold text-center mb-6 text-white">Enter the Code</h2>
+            <input
+                  type="text"
+                  placeholder="Your Name"
+                  className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all w-full"
+                   required
+                  onChange={(e) => setGroupName(e.target.value)}
+                />
+              <h2 className="text-2xl font-semibold text-center mb-6 text-white mt-6">Enter the Code</h2>
               <div className="flex justify-center gap-4">
                 {code.map((c, i) => (
                   <input
@@ -262,7 +277,7 @@ export default function Home() {
                   type="text"
                   placeholder="Group Name"
                   className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all"
-                  value={groupName}
+                  value={groupName} required
                   onChange={(e) => setGroupName(e.target.value)}
                 />
 
@@ -270,7 +285,7 @@ export default function Home() {
                   type="text"
                   placeholder="Your Name (Admin)"
                   className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all"
-                  value={adminName}
+                  value={adminName} required
                   onChange={(e) => setAdminName(e.target.value)}
                 />
 
@@ -278,7 +293,7 @@ export default function Home() {
                   type="number"
                   placeholder="Number of Members"
                   className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all"
-                  value={membersCount}
+                  value={membersCount} required
                   onChange={(e) => setMembersCount(e.target.value)}
                 />
               </div>
@@ -307,10 +322,10 @@ export default function Home() {
                   Generate Code
                 </button>
                 <button
-                  onClick={() => setCreate(false)}
+                  onClick={async() => {await handleCreateRoom();setCreate(false)}}
                   className="flex-1 rounded-md border border-white/70 px-5 py-3 font-medium text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#00538C] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 >
-                  Close
+                  Done
                 </button>
               </div>
             </div>
