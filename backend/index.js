@@ -21,6 +21,7 @@ const io = new Server(server, {
 
 const activeRooms = {}
 const users = {}
+const roomMessages = {};
 
 app.post("/api/addCreateRoomInfo",async(req,res)=>{
     const {groupName,adminName,membersCount,roomCode} = req.body
@@ -56,6 +57,39 @@ app.get("/api/getRoomInfo",async(req,res)=>{
     res.json({grpName:data.groupName,adminName:data.adminName,roomCode:data.roomCode})
 })
 
+app.post("/api/removeMember", async (req, res) => {
+  const { roomCode, memberName, adminName } = req.body;
+
+  try {
+    const roomData = await roomCreate.findOne({ roomCode });
+    if (!roomData) return res.status(404).json({ message: "Room not found" });
+    if (roomData.adminName !== adminName) {
+      return res.status(403).json({ message: "Only admin can remove members" });
+    }
+    const memberSocketId = Object.keys(users).find(
+      (key) => users[key]?.name === memberName && users[key]?.roomCode === roomCode
+    );
+    if (!memberSocketId) return res.status(404).json({ message: "Member not found in room" });
+    io.sockets.sockets.get(memberSocketId)?.leave(roomCode);
+    io.to(memberSocketId).emit("removed_from_room", {
+      message: "You have been removed by admin",
+      name: memberName
+    });
+    io.to(roomCode).emit("notification", `${memberName} has been removed by admin`);
+
+    // Update activeRooms count
+    if (activeRooms[roomCode] > 0) activeRooms[roomCode] -= 1;
+    delete users[memberSocketId];
+
+    res.json({ message: `${memberName} removed successfully` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id)
 
@@ -71,18 +105,30 @@ io.on("connection", (socket) => {
 
   // Handle Chat Message
   socket.on("chat_message", ({ roomCode, message }) => {
-    const sender = users[socket.id]?.name || "Anonymous"
-    const msgData = {
-      message,
-      username: sender,
-      userId: socket.id,
-      timestamp: new Date().toISOString(),
-    }
+  const sender = users[socket.id]?.name || "Anonymous";
+  const msgData = {
+    id: Date.now() + Math.random(), // unique id for tracking
+    message,
+    username: sender,
+    userId: socket.id,
+    timestamp: new Date().toISOString(),
+  };
 
-    // Send only once:
-    socket.emit("chat_message", { ...msgData, isSelf: true })
-    socket.to(roomCode).emit("chat_message", msgData)
-  })
+  // Initialize array if needed
+  if (!roomMessages[roomCode]) roomMessages[roomCode] = [];
+  roomMessages[roomCode].push(msgData);
+
+  // Send to everyone in room
+  socket.emit("chat_message", { ...msgData, isSelf: true });
+  socket.to(roomCode).emit("chat_message", msgData);
+
+  // Set timer to delete after 2 minutes (120000 ms)
+  setTimeout(() => {
+    roomMessages[roomCode] = roomMessages[roomCode].filter(msg => msg.id !== msgData.id);
+    io.to(roomCode).emit("delete_message", msgData.id); // tell clients to remove
+  }, 60000);
+});
+
 
   // Handle Disconnect
   socket.on("disconnect", () => {
