@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 function OrbitingImage() {
   return (
@@ -85,6 +86,10 @@ export default function Home() {
   const [adminName, setAdminName] = useState("")
   const [membersCount, setMembersCount] = useState("")
   const [roomCode, setRoomCode] = useState("")
+  const [memberName, setMemberName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+
+  const navigate = useNavigate();
 
   const generateRoomCode = () => {
     if(groupName==="" || adminName==="" || membersCount===""){
@@ -145,14 +150,48 @@ export default function Home() {
     });
     const data = await res.json();
     console.log(data);
+    setGroupName("");
+    setAdminName("");
+    setMembersCount("");
+    setRoomCode("");
+    setCreate(false);
     alert("Data saved")
+  }
+
+  const handleJoinRoom=async()=>{
+    const joinedCode = code.join("");
+    setJoinCode(joinedCode);
+    const res = await fetch("/api/joinRoom", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomCode: joinedCode, name: memberName })
+    });
+    if(res.status===400){
+      alert("Room is full");
+      return;
+    }
+    if(res.status===404){
+      alert("Wrong code! Room does not exist")
+      return;
+    }
+    if(!res.ok){
+      alert("Some error occured. Please try after some time")
+      return;
+    }
+    const data = await res.json();
+    console.log(data);
+    navigate('/chat',{state:{memberName, roomCode: joinedCode}})
+    setMemberName("");
+    setCode(["", "", "", "", ""]);
+    setJoin(false);
+    alert("You'll be joining room now")
   }
 
   const features = [
     {
       title: "Privacy",
       desc: "Chats don't get stored, maintaining your privacy is our duty.",
-      img: "feature-1/.jpg",
+      img: "feature-1.jpg",
     },
     {
       title: "Words Control",
@@ -234,8 +273,8 @@ export default function Home() {
                   type="text"
                   placeholder="Your Name"
                   className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all w-full"
-                   required
-                  onChange={(e) => setGroupName(e.target.value)}
+                   value={memberName} required
+                  onChange={(e) => setMemberName(e.target.value)}
                 />
               <h2 className="text-2xl font-semibold text-center mb-6 text-white mt-6">Enter the Code</h2>
               <div className="flex justify-center gap-4">
@@ -258,7 +297,7 @@ export default function Home() {
                 >
                   Close
                 </button>
-                <button className="mt-8 w-full rounded-md border border-white/70 px-5 py-3 font-medium text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#00538C] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 m-2">
+                <button className="mt-8 w-full rounded-md border border-white/70 px-5 py-3 font-medium text-white transition-all hover:-translate-y-0.5 hover:border-white hover:bg-white hover:text-[#00538C] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 m-2" onClick={handleJoinRoom}>
                   Proceed
                 </button>
               </div>
