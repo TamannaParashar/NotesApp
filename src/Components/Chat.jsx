@@ -11,10 +11,9 @@ export default function Chat() {
   const [input, setInput] = useState("")
   const [roomInfo, setRoomInfo] = useState({ grpName: "", adminName: "" })
   const [abandonBox,setAbandonBox] = useState(false);
-  const [bannedWords, setBannedWords] = useState([]);
   const [tempWords, setTempWords] = useState("");
   const [members, setMembers] = useState([]);
-const [selectedTarget, setSelectedTarget] = useState("all");
+  const [selectedTarget, setSelectedTarget] = useState("all");
 
   const socketRef = useRef(null)
 
@@ -80,32 +79,36 @@ useEffect(() => {
   };
 }, [navigate, memberName]);
 
-const handleAbandonSubmit = () => {
-    const words = tempWords
-      .split(",")
-      .map((w) => w.trim().toLowerCase())
-      .filter(Boolean);
-    setBannedWords(words);
-    setAbandonBox(false);
-    setTempWords("");
-    alert("🚫 Banned words added successfully!");
-  };
-
   return (
-    <div className="fixed inset-0 flex flex-col bg-white text-black">
-      <div className="flex items-center justify-between p-4 border-b bg-blue-500 text-white">
+    <div className="fixed inset-0 flex flex-col bg-white text-black" 
+    style={{backgroundImage:'url(chatBg.jpg)'}}>
+      <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-pink-400 to-green-300 text-black">
         <h2 className="text-xl font-semibold">{roomInfo.grpName}</h2>
-        <span>Admin: {roomInfo.adminName}</span>
-        <button onClick={() => {
-    const name = prompt("Enter member name to remove");
-    if (name) removeMember(name);
-  }}>remove</button>
-  <button onClick={()=>{setAbandonBox(!abandonBox)}}>Abandon words</button>
+        {!(roomInfo.adminName===memberName) &&<span className="flex justify-end font-semibold">Admin: {roomInfo.adminName}</span>}
+        <div className="flex justify-end">
+        {roomInfo.adminName === memberName && (<button onClick={() => {const name = prompt("Enter member name to remove");if (name) removeMember(name);}} className="mr-2 font-semibold underline">Remove</button>)}
+        {roomInfo.adminName === memberName &&(<button onClick={()=>{setAbandonBox(!abandonBox)}}className="ml-2 font-semibold underline">Abandon words</button>)}
+        {roomInfo.adminName === memberName && (
+          <button onClick={async () => {
+            const newLockState = !roomInfo.isLocked;
+            await fetch("/api/toggleLock", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ roomCode, isLocked: newLockState })
+            });
+            setRoomInfo(prev => ({ ...prev, isLocked: newLockState }));
+          }}
+          className="ml-2 font-semibold underline">
+          {roomInfo.isLocked ? "Unlock Room" : "Lock Room"}
+          </button>
+        )}
+
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {notifications.map((note, idx) => (
-          <div key={idx} className="text-gray-500 italic text-sm">
+          <div key={idx} className="text-white italic text-sm">
             {note}
           </div>
         ))}
@@ -113,10 +116,10 @@ const handleAbandonSubmit = () => {
         {messages.map((msg, idx) => (
           <div
             key={idx}
-            className={`p-2 rounded-md max-w-[70%] ${
+            className={`p-2 rounded-md w-max ${
               msg.isSelf
-                ? "bg-blue-100 self-end ml-auto"
-                : "bg-gray-200 self-start mr-auto"
+                ? "bg-pink-400 self-end ml-auto"
+                : "bg-green-300 self-start mr-auto"
             }`}
           >
             <span className="font-semibold">{msg.username}: </span>
@@ -125,23 +128,15 @@ const handleAbandonSubmit = () => {
         ))}
       </div>
 
-      <form
-        onSubmit={sendMessage}
-        className="flex border-t border-gray-300 p-4 space-x-2"
-      >
+      <form onSubmit={sendMessage} className="flex border-t border-gray-300 p-4 space-x-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message..."
-          className="flex-1 border rounded px-3 py-2 outline-none"
+          className="flex-1 border rounded px-3 py-2 outline-none text-white"
         />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Send
-        </button>
+        <button type="submit" className="bg-gradient-to-r from-pink-400 to-green-300 px-4 py-2 rounded text-black">Send</button>
       </form>
       {abandonBox && (
   <div className="inset-0 fixed bg-black/40 flex items-center justify-center">
@@ -171,6 +166,11 @@ const handleAbandonSubmit = () => {
       <div className="flex justify-between">
         <button
           onClick={async () => {
+            if (!tempWords.trim()) {
+              alert("Nothing was written, exiting...");
+              setAbandonBox(false);
+              return;
+            }
             await fetch("/api/setBannedWords", {
               method: "POST",
               headers: { "Content-Type": "application/json" },

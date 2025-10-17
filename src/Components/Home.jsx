@@ -170,6 +170,10 @@ export default function Home() {
       alert("Room is full");
       return;
     }
+    if(res.status===403){
+      alert("Room has been locked by the admin");
+      return;
+    }
     if(res.status===404){
       alert("Wrong code! Room does not exist")
       return;

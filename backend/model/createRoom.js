@@ -17,6 +17,10 @@ const roomInfo = new mongoose.Schema({
     roomCode:{
         type:Number,
         required:true
+    },
+    isLocked:{
+        type:Boolean,
+        default:false
     }
 })
 

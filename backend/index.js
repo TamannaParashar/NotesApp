@@ -38,6 +38,9 @@ app.post("/api/joinRoom", async (req, res) => {
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
     }
+    if(room.isLocked){
+      return res.status(403).json({message:"Room has been locked"});
+    }
     if (!activeRooms[roomCode]) {
       activeRooms[roomCode] = 0;
     }
@@ -89,9 +92,9 @@ app.post("/api/removeMember", async (req, res) => {
   }
 });
 
-// 🔹 Add or update banned words
+// Add or update banned words
 app.post("/api/setBannedWords", async (req, res) => {
-  const { roomCode, target, words } = req.body; // target = "all" or specific member name
+  const { roomCode, target, words } = req.body;
   if (!bannedWordsData[roomCode]) bannedWordsData[roomCode] = { all: [], members: {} };
 
   if (target === "all") {
@@ -105,7 +108,7 @@ app.post("/api/setBannedWords", async (req, res) => {
   res.json({ success: true });
 });
 
-// 🔹 Remove banned words (withdraw restrictions)
+// Remove banned words (withdraw restrictions)
 app.post("/api/removeBannedWords", async (req, res) => {
   const { roomCode, target } = req.body;
   if (!bannedWordsData[roomCode]) return res.status(404).json({ message: "Room not found" });
@@ -116,6 +119,24 @@ app.post("/api/removeBannedWords", async (req, res) => {
   io.to(roomCode).emit("notification", `✅ Restrictions withdrawn for ${target}`);
   res.json({ success: true });
 });
+
+app.post("/api/toggleLock", async (req, res) => {
+  try {
+    const { roomCode, isLocked } = req.body;
+    const room = await roomCreate.findOne({ roomCode });
+    if (!room) return res.status(404).json({ message: "Room not found" });
+
+    room.isLocked = isLocked;
+    await room.save();
+
+    io.to(roomCode).emit("notification", `Admin has ${isLocked ? "locked" : "unlocked"} the room`);
+    res.json({ message: "Room lock status updated", isLocked });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id)
