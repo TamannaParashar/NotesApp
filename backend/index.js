@@ -22,6 +22,7 @@ const io = new Server(server, {
 const activeRooms = {}
 const users = {}
 const roomMessages = {};
+const bannedWordsData = {};
 
 app.post("/api/addCreateRoomInfo",async(req,res)=>{
     const {groupName,adminName,membersCount,roomCode} = req.body
@@ -88,7 +89,33 @@ app.post("/api/removeMember", async (req, res) => {
   }
 });
 
+// 🔹 Add or update banned words
+app.post("/api/setBannedWords", async (req, res) => {
+  const { roomCode, target, words } = req.body; // target = "all" or specific member name
+  if (!bannedWordsData[roomCode]) bannedWordsData[roomCode] = { all: [], members: {} };
 
+  if (target === "all") {
+    bannedWordsData[roomCode].all = [...new Set([...bannedWordsData[roomCode].all, ...words])];
+  } else {
+    if (!bannedWordsData[roomCode].members[target]) bannedWordsData[roomCode].members[target] = [];
+    bannedWordsData[roomCode].members[target] = [...new Set([...bannedWordsData[roomCode].members[target], ...words])];
+  }
+
+  io.to(roomCode).emit("notification", `🚫 Banned words updated for ${target}`);
+  res.json({ success: true });
+});
+
+// 🔹 Remove banned words (withdraw restrictions)
+app.post("/api/removeBannedWords", async (req, res) => {
+  const { roomCode, target } = req.body;
+  if (!bannedWordsData[roomCode]) return res.status(404).json({ message: "Room not found" });
+
+  if (target === "all") bannedWordsData[roomCode].all = [];
+  else delete bannedWordsData[roomCode].members[target];
+
+  io.to(roomCode).emit("notification", `✅ Restrictions withdrawn for ${target}`);
+  res.json({ success: true });
+});
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id)
@@ -101,43 +128,55 @@ io.on("connection", (socket) => {
     // Notify others
     socket.to(roomCode).emit("notification", `${memberName} has joined the room`)
     console.log(`${memberName} joined room ${roomCode}`)
+
+    const currentMembers = Object.values(users)
+  .filter(u => u.roomCode === roomCode)
+  .map(u => u.name);
+io.to(roomCode).emit("update_members", currentMembers);
+
   })
 
   // Handle Chat Message
   socket.on("chat_message", ({ roomCode, message }) => {
   const sender = users[socket.id]?.name || "Anonymous";
+
+  // Get banned words for this room
+  const bannedRoom = bannedWordsData[roomCode] || { all: [], members: {} };
+  const userBanned = bannedRoom.members[sender] || [];
+  const combinedBanned = [...new Set([...bannedRoom.all, ...userBanned])];
+
+  // Check for any banned word in message
+  const lowerMsg = message.toLowerCase();
+  if (combinedBanned.some(word => lowerMsg.includes(word))) {
+    socket.emit("notification", "🚫 Your message contains a banned word and was not sent.");
+    return;
+  }
+
   const msgData = {
-    id: Date.now() + Math.random(), // unique id for tracking
+    id: Date.now() + Math.random(),
     message,
     username: sender,
     userId: socket.id,
     timestamp: new Date().toISOString(),
   };
 
-  // Initialize array if needed
   if (!roomMessages[roomCode]) roomMessages[roomCode] = [];
   roomMessages[roomCode].push(msgData);
 
-  // Send to everyone in room
   socket.emit("chat_message", { ...msgData, isSelf: true });
   socket.to(roomCode).emit("chat_message", msgData);
 
-  // Set timer to delete after 2 minutes (120000 ms)
   setTimeout(() => {
     roomMessages[roomCode] = roomMessages[roomCode].filter(msg => msg.id !== msgData.id);
-    io.to(roomCode).emit("delete_message", msgData.id); // tell clients to remove
+    io.to(roomCode).emit("delete_message", msgData.id);
   }, 60000);
 });
-
 
   // Handle Disconnect
   socket.on("disconnect", () => {
     const user = users[socket.id]
     if (user && user.roomCode) {
-      socket.to(user.roomCode).emit(
-        "notification",
-        `${user.name} has left the room`
-      )
+      socket.to(user.roomCode).emit("notification",`${user.name} has left the room`)
       if (activeRooms[user.roomCode] > 0) {
       activeRooms[user.roomCode] -= 1
     }
