@@ -24,7 +24,7 @@ export default function Chat() {
       .then((data) => setRoomInfo(data))
       .catch(console.error)
 
-    const socket = io("http://localhost:3000")
+    const socket = io(backendUrl)
     socketRef.current = socket
 
     socket.emit("joinRoom", { roomCode, memberName })
