@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { io } from "socket.io-client"
-const backendUrl = import.meta.env.VIYE_BACKEND_URL
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 export default function Chat() {
   const navigate = useNavigate();
