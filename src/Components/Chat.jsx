@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { io } from "socket.io-client"
+const backendUrl = import.meta.env.VIYE_BACKEND_URL
 
 export default function Chat() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function Chat() {
   const socketRef = useRef(null)
 
   useEffect(() => {
-    fetch(`/api/getRoomInfo?roomCode=${roomCode}`)
+    fetch(`${backendUrl}/api/getRoomInfo?roomCode=${roomCode}`)
       .then((res) => res.json())
       .then((data) => setRoomInfo(data))
       .catch(console.error)
@@ -55,7 +56,7 @@ export default function Chat() {
   }
 
   const removeMember = async (memberName) => {
-  await fetch("/api/removeMember", {
+  await fetch(`${backendUrl}/api/removeMember`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ roomCode, memberName, adminName:roomInfo.adminName })
@@ -91,7 +92,7 @@ useEffect(() => {
         {roomInfo.adminName === memberName && (
           <button onClick={async () => {
             const newLockState = !roomInfo.isLocked;
-            await fetch("/api/toggleLock", {
+            await fetch(`${backendUrl}/api/toggleLock`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ roomCode, isLocked: newLockState })
@@ -171,7 +172,7 @@ useEffect(() => {
               setAbandonBox(false);
               return;
             }
-            await fetch("/api/setBannedWords", {
+            await fetch(`${backendUrl}/api/setBannedWords`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -191,7 +192,7 @@ useEffect(() => {
 
         <button
           onClick={async () => {
-            await fetch("/api/removeBannedWords", {
+            await fetch(`${backendUrl}/api/removeBannedWords`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ roomCode, target: selectedTarget })

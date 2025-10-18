@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 function OrbitingImage() {
   return (
@@ -138,7 +139,7 @@ export default function Home() {
   }
 
   const handleCreateRoom=async()=>{
-    const res = await fetch("/api/addCreateRoomInfo",{
+    const res = await fetch(`${backendUrl}/api/addCreateRoomInfo`,{
         method:"Post",
         headers: {"Content-Type": "application/json"},
         body:JSON.stringify({
@@ -161,7 +162,7 @@ export default function Home() {
   const handleJoinRoom=async()=>{
     const joinedCode = code.join("");
     setJoinCode(joinedCode);
-    const res = await fetch("/api/joinRoom", {
+    const res = await fetch(`${backendUrl}/api/joinRoom`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomCode: joinedCode, name: memberName })
@@ -217,7 +218,7 @@ export default function Home() {
       >
         <nav className="flex gap-6 sm:flex">
           <a href="#features" className="text-#00538C font-semibold">Features</a>
-          <a href="#" className="text-#00538C font-semibold">About</a>
+          <a href="/about" className="text-#00538C font-semibold">About</a>
         </nav>
       </header>
 
