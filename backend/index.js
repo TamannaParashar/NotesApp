@@ -2,7 +2,7 @@ import "./db.js"
 import cors from 'cors'
 import express from 'express'
 const app = express();
-const port = 3000
+const port = process.env.PORT || 3000;
 import roomCreate from "./model/createRoom.js";
 import { Server } from "socket.io";
 import http from "http"
