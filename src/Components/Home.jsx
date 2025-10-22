@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 function OrbitingImage() {
@@ -218,7 +218,7 @@ export default function Home() {
       >
         <nav className="flex gap-6 sm:flex">
           <a href="#features" className="text-#00538C font-semibold">Features</a>
-          <a href="/about" className="text-#00538C font-semibold">About</a>
+          <Link to="/about" className="text-#00538C font-semibold">About</Link>
         </nav>
       </header>
 
