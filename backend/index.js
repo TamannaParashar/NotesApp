@@ -45,7 +45,7 @@ app.post("/api/joinRoom", async (req, res) => {
     if (!activeRooms[roomCode]) {
       activeRooms[roomCode] = 0;
     }
-    if (activeRooms[roomCode] > room.membersCount) {
+    if (activeRooms[roomCode] >= room.membersCount) {
       return res.status(400).json({ message: "Room is full" });
     }
     activeRooms[roomCode] += 1;
