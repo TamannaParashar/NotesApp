@@ -38,16 +38,18 @@ app.post("/api/joinRoom", async (req, res) => {
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
     }
+    if(name!==room.adminName){
     if(room.isLocked){
       return res.status(403).json({message:"Room has been locked"});
     }
     if (!activeRooms[roomCode]) {
       activeRooms[roomCode] = 0;
     }
-    if (activeRooms[roomCode] >= room.membersCount - 1) {
+    if (activeRooms[roomCode] > room.membersCount) {
       return res.status(400).json({ message: "Room is full" });
     }
     activeRooms[roomCode] += 1;
+  }
     res.status(201).json({message: "Successfully joined the room"})
   } catch (err) {
     console.error(err);
