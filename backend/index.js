@@ -2,8 +2,10 @@ import "./db.js"
 import cors from 'cors'
 import express from 'express'
 const app = express();
+/* eslint-env node */
 const port = process.env.PORT || 3000;
 import roomCreate from "./model/createRoom.js";
+import Message from "./model/Message.js";
 import { Server } from "socket.io";
 import http from "http"
 
@@ -23,20 +25,26 @@ const activeRooms = {}
 const users = {}
 const roomMessages = {};
 const bannedWordsData = {};
+const userMessageCounts = {};
 
 app.post("/api/addCreateRoomInfo",async(req,res)=>{
-    const {groupName,adminName,membersCount,roomCode} = req.body
-    const room = new roomCreate({groupName,adminName,membersCount,roomCode});
+    const {groupName,adminName,adminPassword,membersCount,roomCode} = req.body
+    const room = new roomCreate({groupName,adminName,adminPassword,membersCount,roomCode});
     await room.save();
     res.status(201).json({ message: "Room created successfully" });
 })
 
 app.post("/api/joinRoom", async (req, res) => {
   try {
-    const { roomCode, name } = req.body;
+    const { roomCode, name, adminPassword } = req.body;
     const room = await roomCreate.findOne({ roomCode });
     if (!room) {
       return res.status(404).json({ message: "Room not found" });
+    }
+    if(name === room.adminName) {
+      if(adminPassword !== room.adminPassword) {
+        return res.status(401).json({ message: "Name reserved for admin, or incorrect password" });
+      }
     }
     if(name!==room.adminName){
     if(room.isLocked){
@@ -60,7 +68,7 @@ app.post("/api/joinRoom", async (req, res) => {
 app.get("/api/getRoomInfo",async(req,res)=>{
     const { roomCode } = req.query;
     const data = await roomCreate.findOne({roomCode})
-    res.json({grpName:data.groupName,adminName:data.adminName,roomCode:data.roomCode})
+    res.json({grpName:data.groupName,adminName:data.adminName,roomCode:data.roomCode, messageLimit: data.messageLimit, isLocked: data.isLocked})
 })
 
 app.post("/api/removeMember", async (req, res) => {
@@ -139,14 +147,49 @@ app.post("/api/toggleLock", async (req, res) => {
   }
 });
 
+app.post("/api/setMessageLimit", async (req, res) => {
+  try {
+    const { roomCode, limit } = req.body;
+    const room = await roomCreate.findOne({ roomCode });
+    if (!room) return res.status(404).json({ message: "Room not found" });
+
+    room.messageLimit = limit;
+    await room.save();
+
+    io.to(roomCode).emit("notification", `Admin has set the message limit to ${limit}`);
+    res.json({ message: "Message limit updated", limit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id)
 
   // Join Room
-  socket.on("joinRoom", ({ roomCode, memberName }) => {
+  socket.on("joinRoom", async ({ roomCode, memberName }) => {
     socket.join(roomCode)
     users[socket.id] = { name: memberName, roomCode }
+
+    if (!userMessageCounts[roomCode]) userMessageCounts[roomCode] = {};
+    if (userMessageCounts[roomCode][memberName] === undefined) userMessageCounts[roomCode][memberName] = 0;
+
+    try {
+      const history = await Message.find({ roomCode }).sort({ timestamp: 1 });
+      const formattedHistory = history.map(msg => ({
+        id: msg._id.toString(),
+        message: msg.message,
+        username: msg.username,
+        userId: msg.userId,
+        timestamp: msg.timestamp,
+        isSelf: msg.username === memberName
+      }));
+      socket.emit("chat_history", formattedHistory);
+    } catch (err) {
+      console.error(err);
+    }
 
     // Notify others
     socket.to(roomCode).emit("notification", `${memberName} has joined the room`)
@@ -160,7 +203,7 @@ io.to(roomCode).emit("update_members", currentMembers);
   })
 
   // Handle Chat Message
-  socket.on("chat_message", ({ roomCode, message }) => {
+  socket.on("chat_message", async ({ roomCode, message }) => {
   const sender = users[socket.id]?.name || "Anonymous";
 
   // Get banned words for this room
@@ -175,25 +218,58 @@ io.to(roomCode).emit("update_members", currentMembers);
     return;
   }
 
-  const msgData = {
-    id: Date.now() + Math.random(),
-    message,
-    username: sender,
-    userId: socket.id,
-    timestamp: new Date().toISOString(),
-  };
+  try {
+    const room = await roomCreate.findOne({ roomCode });
+    if (room && room.messageLimit > 0) {
+      if (sender !== room.adminName) {
+         const count = userMessageCounts[roomCode]?.[sender] || 0;
+         if (count >= room.messageLimit) {
+           socket.emit("notification", `🚫 You have reached the message limit of ${room.messageLimit}. Wait for admin to view messages.`);
+           return;
+         }
+         userMessageCounts[roomCode][sender] = count + 1;
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
 
-  if (!roomMessages[roomCode]) roomMessages[roomCode] = [];
-  roomMessages[roomCode].push(msgData);
+  try {
+    const newMsg = new Message({
+      roomCode,
+      message,
+      username: sender,
+      userId: socket.id,
+      timestamp: new Date().toISOString()
+    });
+    await newMsg.save();
 
-  socket.emit("chat_message", { ...msgData, isSelf: true });
-  socket.to(roomCode).emit("chat_message", msgData);
+    const finalMsgData = {
+      id: newMsg._id.toString(),
+      message: newMsg.message,
+      username: newMsg.username,
+      userId: newMsg.userId,
+      timestamp: newMsg.timestamp,
+    };
 
-  setTimeout(() => {
-    roomMessages[roomCode] = roomMessages[roomCode].filter(msg => msg.id !== msgData.id);
-    io.to(roomCode).emit("delete_message", msgData.id);
-  }, 60000);
+    if (!roomMessages[roomCode]) roomMessages[roomCode] = [];
+    roomMessages[roomCode].push(finalMsgData);
+
+    socket.emit("chat_message", { ...finalMsgData, isSelf: true });
+    socket.to(roomCode).emit("chat_message", finalMsgData);
+  } catch (err) {
+    console.error("Error saving message", err);
+  }
 });
+
+  socket.on("admin_seen", ({ roomCode }) => {
+    if (userMessageCounts[roomCode]) {
+      for (const user in userMessageCounts[roomCode]) {
+        userMessageCounts[roomCode][user] = 0;
+      }
+    }
+    io.to(roomCode).emit("notification", `👁️ Admin has viewed the messages. You can send messages again.`);
+  });
 
   // Handle Disconnect
   socket.on("disconnect", () => {
