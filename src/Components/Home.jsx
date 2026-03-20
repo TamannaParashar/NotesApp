@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 function OrbitingImage() {
   return (
@@ -85,15 +84,16 @@ export default function Home() {
   const [code, setCode] = useState(["", "", "", "", ""])
   const [groupName, setGroupName] = useState("")
   const [adminName, setAdminName] = useState("")
+  const [createAdminPassword, setCreateAdminPassword] = useState("")
+  const [joinAdminPassword, setJoinAdminPassword] = useState("")
   const [membersCount, setMembersCount] = useState("")
   const [roomCode, setRoomCode] = useState("")
   const [memberName, setMemberName] = useState("");
-  const [joinCode, setJoinCode] = useState("");
 
   const navigate = useNavigate();
 
   const generateRoomCode = () => {
-    if(groupName==="" || adminName==="" || membersCount===""){
+    if(groupName==="" || adminName==="" || createAdminPassword==="" || membersCount===""){
         alert("Enter the required information first")
         return;
     }
@@ -139,12 +139,13 @@ export default function Home() {
   }
 
   const handleCreateRoom=async()=>{
-    const res = await fetch(`${backendUrl}/api/addCreateRoomInfo`,{
+    const res = await fetch(`/api/addCreateRoomInfo`,{
         method:"Post",
         headers: {"Content-Type": "application/json"},
         body:JSON.stringify({
             groupName,
             adminName,
+            adminPassword: createAdminPassword,
             membersCount,
             roomCode
         })
@@ -153,6 +154,7 @@ export default function Home() {
     console.log(data);
     setGroupName("");
     setAdminName("");
+    setCreateAdminPassword("");
     setMembersCount("");
     setRoomCode("");
     setCreate(false);
@@ -161,11 +163,10 @@ export default function Home() {
 
   const handleJoinRoom=async()=>{
     const joinedCode = code.join("");
-    setJoinCode(joinedCode);
-    const res = await fetch(`${backendUrl}/api/joinRoom`, {
+    const res = await fetch(`/api/joinRoom`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ roomCode: joinedCode, name: memberName })
+      body: JSON.stringify({ roomCode: joinedCode, name: memberName, adminPassword: joinAdminPassword })
     });
     if(res.status===400){
       alert("Room is full");
@@ -173,6 +174,10 @@ export default function Home() {
     }
     if(res.status===403){
       alert("Room has been locked by the admin");
+      return;
+    }
+    if(res.status===401){
+      alert("Name is reserved for admin, or incorrect admin password");
       return;
     }
     if(res.status===404){
@@ -187,6 +192,7 @@ export default function Home() {
     console.log(data);
     navigate('/chat',{state:{memberName, roomCode: joinedCode}})
     setMemberName("");
+    setJoinAdminPassword("");
     setCode(["", "", "", "", ""]);
     setJoin(false);
     alert("You'll be joining room now")
@@ -281,6 +287,13 @@ export default function Home() {
                    value={memberName} required
                   onChange={(e) => setMemberName(e.target.value)}
                 />
+            <input
+                  type="password"
+                  placeholder="Admin Password (if you are the admin)"
+                  className="mt-4 px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all w-full"
+                   value={joinAdminPassword}
+                  onChange={(e) => setJoinAdminPassword(e.target.value)}
+                />
               <h2 className="text-2xl font-semibold text-center mb-6 text-white mt-6">Enter the Code</h2>
               <div className="flex justify-center gap-4">
                 {code.map((c, i) => (
@@ -331,6 +344,14 @@ export default function Home() {
                   className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all"
                   value={adminName} required
                   onChange={(e) => setAdminName(e.target.value)}
+                />
+
+                <input
+                  type="password"
+                  placeholder="Admin Password"
+                  className="px-4 py-3 rounded-lg border border-white/70 bg-white/10 text-white placeholder-white/70 outline-none focus:border-white focus:bg-white focus:text-[#00538C] transition-all"
+                  value={createAdminPassword} required
+                  onChange={(e) => setCreateAdminPassword(e.target.value)}
                 />
 
                 <input

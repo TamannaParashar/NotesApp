@@ -10,6 +10,10 @@ const roomInfo = new mongoose.Schema({
         type:String,
         required:true
     },
+    adminPassword:{
+        type:String,
+        required:true
+    },
     membersCount:{
         type:Number,
         required:true
@@ -21,6 +25,10 @@ const roomInfo = new mongoose.Schema({
     isLocked:{
         type:Boolean,
         default:false
+    },
+    messageLimit:{
+        type:Number,
+        default:0
     }
 })
 
