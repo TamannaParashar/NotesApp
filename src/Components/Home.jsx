@@ -139,7 +139,7 @@ export default function Home() {
   }
 
   const handleCreateRoom=async()=>{
-    const res = await fetch(`/api/addCreateRoomInfo`,{
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/addCreateRoomInfo`,{
         method:"Post",
         headers: {"Content-Type": "application/json"},
         body:JSON.stringify({
@@ -163,7 +163,7 @@ export default function Home() {
 
   const handleJoinRoom=async()=>{
     const joinedCode = code.join("");
-    const res = await fetch(`/api/joinRoom`, {
+    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/joinRoom`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roomCode: joinedCode, name: memberName, adminPassword: joinAdminPassword })

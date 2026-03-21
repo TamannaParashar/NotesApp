@@ -1,5 +1,5 @@
 import mongoose from "mongoose"
-const url = "mongodb://localhost:27017/notesapp"
+const url = process.env.MONGO_URL || "mongodb://localhost:27017/notesapp"
 
 mongoose.connect(url,{
     useNewUrlParser: true,

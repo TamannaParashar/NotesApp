@@ -18,12 +18,12 @@ export default function Chat() {
   const socketRef = useRef(null)
 
   useEffect(() => {
-    fetch(`/api/getRoomInfo?roomCode=${roomCode}`)
+    fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/getRoomInfo?roomCode=${roomCode}`)
       .then((res) => res.json())
       .then((data) => setRoomInfo(data))
       .catch(console.error)
 
-    const socket = io("http://localhost:3000")
+    const socket = io(import.meta.env.VITE_BACKEND_URL || "http://localhost:3000")
     socketRef.current = socket
 
     socket.emit("joinRoom", { roomCode, memberName })
@@ -55,7 +55,7 @@ export default function Chat() {
   }
 
   const removeMember = async (memberName) => {
-  await fetch(`/api/removeMember`, {
+  await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/removeMember`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ roomCode, memberName, adminName:roomInfo.adminName })
@@ -107,7 +107,7 @@ useEffect(() => {
                 </button>
                 <button onClick={async () => {
                   const newLockState = !roomInfo.isLocked;
-                  await fetch(`/api/toggleLock`, {
+                  await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/toggleLock`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ roomCode, isLocked: newLockState })
@@ -119,7 +119,7 @@ useEffect(() => {
                 <button onClick={async () => {
                   const limit = prompt("Enter message limit per user (0 for no limit):", roomInfo.messageLimit || 0);
                   if (limit !== null && !isNaN(limit)) {
-                    await fetch(`/api/setMessageLimit`, {
+                    await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/setMessageLimit`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ roomCode, limit: parseInt(limit) })
@@ -230,7 +230,7 @@ useEffect(() => {
                 </button>
                 <button
                   onClick={async () => {
-                    await fetch(`/api/removeBannedWords`, {
+                    await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/removeBannedWords`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ roomCode, target: selectedTarget })
@@ -248,7 +248,7 @@ useEffect(() => {
                       alert("No words specified.");
                       return;
                     }
-                    await fetch(`/api/setBannedWords`, {
+                    await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/setBannedWords`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
